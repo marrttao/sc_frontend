@@ -1,10 +1,9 @@
 import axios from "axios";
 
 const client = axios.create({
-  baseURL: "http://localhost:5120",
-  timeout: 10000
+  baseURL: "https://sc-backend-mq4c.onrender.com",
+  timeout: 60000
 });
-
 const parseError = (error) => {
   if (error?.response) {
     return typeof error.response.data === "string"

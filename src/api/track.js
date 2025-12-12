@@ -2,7 +2,7 @@ import axios from "axios";
 import { readAccessToken } from "../utils/authFlag";
 
 const client = axios.create({
-  baseURL: "http://localhost:5120",
+  baseURL: "https://sc-backend-mq4c.onrender.com",
   timeout: 15000
 });
 

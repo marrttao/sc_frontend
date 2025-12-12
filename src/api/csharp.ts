@@ -3,8 +3,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5120', // ← порт, на котором сейчас запущен твой C# бэкенд
-  timeout: 10000,
+  baseURL: "https://sc-backend-mq4c.onrender.com",
+  timeout: 60000
 });
 
 // Универсальная функция — вызывает ЛЮБОЙ твой C# сервис и метод
