@@ -3,7 +3,7 @@ import { readAccessToken, clearAuthTokens, setAuthFlag } from "../utils/authFlag
 
 const client = axios.create({
   baseURL: "https://sc-backend-mq4c.onrender.com",
-  timeout: 10000
+  timeout: 60000
 });
 
 const handleAuthFailure = (error) => {
