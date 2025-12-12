@@ -1,0 +1,202 @@
+import React, { useEffect, useState } from "react";
+import { search } from "../../api/search";
+import Header from "../../components/Header.jsx";
+import Footer from "../../components/Footer.jsx";
+import SideBar from "./SideBar.jsx";
+import Choice from "./Choice.jsx";
+import useBreakpoint from "../../hooks/useBreakpoint";
+import { fetchProfile } from "../../api/profile";
+import scc from "../../assets/img/sc.png";
+
+
+const SIDEBAR_WIDTH = 360;
+const DESKTOP_GAP = 0;
+const LAYOUT_MAX_WIDTH = 1240;
+const MAIN_MAX_WIDTH = LAYOUT_MAX_WIDTH - SIDEBAR_WIDTH - DESKTOP_GAP;
+
+const Main = () => {
+  const isMobile = useBreakpoint(768);
+  const showSidebar = !isMobile;
+  const headerOffset = isMobile ? 64 : 56;
+
+  const [mobileSidebarData, setMobileSidebarData] = useState({ tracks: [], artists: [] });
+  const [mobileSidebarLoading, setMobileSidebarLoading] = useState(false);
+  const [randomData, setRandomData] = useState({ tracks: [], users: [] });
+  const [randomLoading, setRandomLoading] = useState(false);
+
+  useEffect(() => {
+    if (showSidebar) {
+      return;
+    }
+
+    let alive = true;
+    const loadSidebarData = async () => {
+      setMobileSidebarLoading(true);
+      try {
+        const profile = await fetchProfile();
+        if (!alive) {
+          return;
+        }
+        setMobileSidebarData({
+          tracks: Array.isArray(profile?.likes) ? profile.likes : [],
+          artists: Array.isArray(profile?.following) ? profile.following : []
+        });
+      } catch (error) {
+        console.error("Failed to load profile suggestions for mobile", error);
+        if (alive) {
+          setMobileSidebarData({ tracks: [], artists: [] });
+        }
+      } finally {
+        if (alive) {
+          setMobileSidebarLoading(false);
+        }
+      }
+    };
+
+    const loadRandomData = async () => {
+      setRandomLoading(true);
+      try {
+        const data = await search("");
+        if (!alive) return;
+        setRandomData({
+          tracks: Array.isArray(data?.tracks) ? data.tracks.slice(0, 8) : [],
+          users: Array.isArray(data?.users) ? data.users.slice(0, 8) : []
+        });
+      } catch (error) {
+        if (alive) setRandomData({ tracks: [], users: [] });
+      } finally {
+        if (alive) setRandomLoading(false);
+      }
+    };
+
+    loadSidebarData();
+    loadRandomData();
+
+    return () => {
+      alive = false;
+    };
+  }, [showSidebar]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        background: "#141414",
+        position: "relative",
+        overflowX: "hidden"
+      }}
+    >
+      <Header />
+      <div
+        style={{
+          display: showSidebar ? "grid" : "block",
+          gridTemplateColumns: showSidebar
+            ? `${SIDEBAR_WIDTH}px minmax(0, ${MAIN_MAX_WIDTH}px)`
+            : undefined,
+          alignItems: "start",
+          columnGap: showSidebar ? `${DESKTOP_GAP}px` : undefined,
+          width: "100%",
+          maxWidth: showSidebar ? `${LAYOUT_MAX_WIDTH}px` : "100%",
+          margin: showSidebar ? "0 auto" : undefined,
+          flex: 1,
+          marginTop: `${headerOffset}px`,
+          position: "relative",
+          overflow: "visible",
+          padding: isMobile ? "0 16px" : 0,
+          boxSizing: "border-box"
+        }}
+      >
+        {showSidebar && (
+          <div
+            style={{
+              gridColumn: "1 / 2",
+              width: "100%",
+              maxWidth: `${SIDEBAR_WIDTH}px`,
+              position: "sticky",
+              top: `${headerOffset + 16}px`,
+              maxHeight: `calc(100vh - ${headerOffset + 32}px)`,
+              overflowY: "auto",
+              zIndex: 2
+            }}
+          >
+            <SideBar />
+          </div>
+        )}
+        <div
+          style={{
+            gridColumn: showSidebar ? "2 / 3" : undefined,
+            display: "flex",
+            justifyContent: "center",
+            width: "100%"
+          }}
+        >
+          <div
+            className="mainContent"
+            style={{
+              width: isMobile ? "100%" : "880px",
+              minWidth: isMobile ? undefined : "880px",
+              maxWidth: isMobile ? "100%" : "880px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              paddingTop: isMobile ? 72 : 96,
+              paddingRight: isMobile ? 16 : 32,
+              paddingBottom: isMobile ? 140 : 160,
+              paddingLeft: isMobile ? 16 : 0,
+              minHeight: `calc(100vh - ${headerOffset}px)`,
+              boxSizing: "border-box",
+              marginRight: isMobile ? 0 : 675,
+              gap: isMobile ? 24 : 40
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: isMobile ? "100%" : MAIN_MAX_WIDTH,
+                display: "flex",
+                flexDirection: "column",
+                gap: isMobile ? 24 : 36
+              }}
+            >
+              <Choice title="Recently Played" />
+              {/* Показываем подписки только если есть данные и не на мобильном */}
+              {Array.isArray(mobileSidebarData.artists) && mobileSidebarData.artists.length > 0 && !isMobile && (
+                <Choice
+                  title="Following"
+                  dataSource="custom"
+                  customTracks={[]}
+                  customArtists={mobileSidebarData.artists}
+                  customLoading={mobileSidebarLoading}
+                />
+              )}
+              {!showSidebar && (
+                <Choice
+                  title="Artists & tracks you might like"
+                  dataSource="custom"
+                  // Prefer profile-based suggestions when available; fall back to random search results
+                  customTracks={isMobile ? (Array.isArray(mobileSidebarData.tracks) && mobileSidebarData.tracks.length > 0 ? mobileSidebarData.tracks : randomData.tracks) : mobileSidebarData.tracks}
+                  customArtists={isMobile ? (Array.isArray(mobileSidebarData.artists) && mobileSidebarData.artists.length > 0 ? mobileSidebarData.artists : randomData.users) : []}
+                  customLoading={isMobile ? (mobileSidebarLoading || randomLoading) : mobileSidebarLoading}
+                />
+              )}
+              {/* Desktop-only callout text below carousels (replaces image) */}
+              {!isMobile && (
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                  <div style={{ width: 720, maxWidth: "100%", background: "#1a1a1a", padding: "20px 22px", borderRadius: 12, color: "#ddd", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, color: "#fff" }}>Discover Your Next Favorite Track</div>
+                    <div style={{ fontSize: 15, lineHeight: 1.5 }}>Explore curated playlists, rising artists, and exclusive releases handpicked for you. Dive into fresh sounds, follow artists you love, and find the music that moves you.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default Main;
